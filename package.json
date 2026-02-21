@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://jtnef.github.io/CFA-Dollars",
+  "homepage": "https://iamonyourteam.github.io/CFA-Dollars",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
