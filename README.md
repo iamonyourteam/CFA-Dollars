@@ -1,39 +1,49 @@
-# Chick-fil-A Dollar Tracker
+# Chick-fil-A Dollar Tracker (Firebase Edition)
 
-A team rewards tracking app with PIN-based login, admin/manager/employee roles, and batch dollar entry.
+All data is stored in Firebase Firestore — syncs across every device in real time.
 
-## Default PINs
-| Role | Name | PIN |
-|------|------|-----|
-| Admin | Admin 1 | 9999 |
-| Manager | Manager 1 | 1111 |
-| Manager | Manager 2 | 2222 |
-| Manager | Manager 3 | 3333 |
-| Employee | (each employee) | 4001–4055 |
+## Setup
 
-## Getting Started
-
-### Install dependencies
 ```bash
 npm install
-```
-
-### Run locally
-```bash
 npm run dev
 ```
-Then open http://localhost:5173
 
-### Deploy to GitHub Pages
-1. Update `homepage` in `package.json` with your GitHub username
-2. Update `base` in `vite.config.js` to match your repo name
-3. Run:
-```bash
-npm run deploy
-```
+Open http://localhost:5173
 
-### Deploy to Netlify (easier)
+## Default PINs
+
+| Role     | Name      | PIN  |
+|----------|-----------|------|
+| Admin    | Admin 1   | 9999 |
+| Manager  | Manager 1 | 1111 |
+| Manager  | Manager 2 | 2222 |
+| Manager  | Manager 3 | 3333 |
+| Employee | Each emp  | 4001–4055 |
+
+Change all PINs after first login via the Manage PINs screen.
+
+## Deploy to Netlify
+
 ```bash
 npm run build
 ```
-Then drag the `dist` folder onto netlify.com.
+
+Drag the `dist` folder onto netlify.com → instant live URL.
+
+## Firebase Rules (important!)
+
+In the Firebase console → Firestore → Rules, update to:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+
+This is fine for an internal team app. For extra security you can add auth later.
