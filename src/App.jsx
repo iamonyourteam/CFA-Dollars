@@ -183,6 +183,7 @@ export default function App() {
         {screen === "history"     && <History      logs={logs} deleteLog={deleteLog} employees={users.employees} />}
         {screen === "leaderboard" && <Leaderboard  totals={totals} users={users} />}
         {screen === "manage-pins" && <ManagePins   users={users} saveUsers={saveUsers} session={session} />}
+        {screen === "manage-team"  && <ManageTeam   users={users} saveUsers={saveUsers} />}
       </AdminShell>
     </>
   );
@@ -316,6 +317,7 @@ function AdminShell({ session, screen, setScreen, onLogout, children }) {
     { id: "history",     label: "History",     icon: "📋" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
     { id: "manage-pins", label: "Manage PINs", icon: "🔑" },
+    { id: "manage-team", label: "Manage Team", icon: "👥" },
   ];
   return (
     <div style={{ minHeight: "100vh", background: "#f6f6f6" }}>
@@ -760,6 +762,118 @@ function ManagePins({ users, saveUsers, session }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── MANAGE TEAM ───────────────────────────────────────────────────────────────
+function ManageTeam({ users, saveUsers }) {
+  const [newName,     setNewName]     = useState("");
+  const [newPosition, setNewPosition] = useState("Front");
+  const [newPin,      setNewPin]      = useState("");
+  const [adding,      setAdding]      = useState(false);
+  const [error,       setError]       = useState("");
+  const [confirmDel,  setConfirmDel]  = useState(null);
+  const [saved,       setSaved]       = useState(false);
+
+  const allPins = [...users.admins, ...(users.managers||[]), ...users.employees].map(u => u.pin);
+
+  async function addEmployee() {
+    const name = newName.trim();
+    if (!name) { setError("Name is required."); return; }
+    if (users.employees.find(e => e.name.toLowerCase() === name.toLowerCase())) { setError("An employee with that name already exists."); return; }
+    if (!/^\d{4}$/.test(newPin)) { setError("PIN must be exactly 4 digits."); return; }
+    if (allPins.includes(newPin)) { setError("That PIN is already in use."); return; }
+    setAdding(true);
+    const updated = {
+      ...users,
+      employees: [...users.employees, { name, position: newPosition, pin: newPin }]
+    };
+    await saveUsers(updated);
+    setNewName(""); setNewPin(""); setNewPosition("Front"); setError("");
+    setSaved(true); setAdding(false);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  async function removeEmployee(name) {
+    const updated = { ...users, employees: users.employees.filter(e => e.name !== name) };
+    await saveUsers(updated);
+    setConfirmDel(null);
+  }
+
+  const front = users.employees.filter(e => e.position === "Front");
+  const back  = users.employees.filter(e => e.position === "Back");
+
+  return (
+    <div>
+      <h2 style={h2}>👥 Manage Team</h2>
+
+      {/* Add employee */}
+      <div style={{ background: "#fff", borderRadius: 14, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", marginBottom: 24 }}>
+        <div style={{ fontWeight: "bold", color: "#333", marginBottom: 14, fontSize: 15 }}>Add New Employee</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <label style={lbl}>Full Name</label>
+            <input value={newName} onChange={e => { setNewName(e.target.value); setError(""); }}
+              placeholder="e.g. Jordan" style={inp} />
+          </div>
+          <div>
+            <label style={lbl}>Position</label>
+            <select value={newPosition} onChange={e => setNewPosition(e.target.value)} style={inp}>
+              <option value="Front">Front of House</option>
+              <option value="Back">Back of House</option>
+            </select>
+          </div>
+        </div>
+        <label style={lbl}>Login PIN (4 digits)</label>
+        <input type="text" maxLength={4} value={newPin}
+          onChange={e => { setNewPin(e.target.value.replace(/\D/g,"").slice(0,4)); setError(""); }}
+          placeholder="e.g. 5678" style={{ ...inp, maxWidth: 120, letterSpacing: 4, fontFamily: "monospace", fontSize: 18 }} />
+        {error && <div style={{ fontSize: 13, color: "#E51636", marginTop: 6 }}>{error}</div>}
+        {saved && <div style={{ fontSize: 13, color: "#16a34a", marginTop: 6 }}>✓ Employee added!</div>}
+        <button onClick={addEmployee} disabled={adding}
+          style={{ ...primaryBtn, width: "auto", padding: "11px 28px", marginTop: 14, fontSize: 14 }}>
+          {adding ? "Saving..." : "➕ Add Employee"}
+        </button>
+      </div>
+
+      {/* Employee list */}
+      {[{ label: "Front of House", list: front }, { label: "Back of House", list: back }].map(({ label, list }) => (
+        <div key={label} style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 12, color: "#aaa", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
+            {label} ({list.length})
+          </div>
+          <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+            {list.length === 0
+              ? <div style={{ padding: 20, textAlign: "center", color: "#bbb", fontSize: 13 }}>No employees</div>
+              : list.map(e => (
+                <div key={e.name} style={{ padding: "12px 16px", borderBottom: "1px solid #f5f5f5" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontWeight: "bold", color: "#222" }}>{e.name}</div>
+                      <div style={{ fontSize: 12, color: "#bbb" }}>PIN: ••••</div>
+                    </div>
+                    <button onClick={() => setConfirmDel(confirmDel === e.name ? null : e.name)}
+                      style={{ background: confirmDel === e.name ? "#fee2e2" : "#f5f5f5", border: "none", borderRadius: 8,
+                        padding: "6px 12px", cursor: "pointer", fontSize: 13,
+                        color: confirmDel === e.name ? "#E51636" : "#888" }}>
+                      {confirmDel === e.name ? "Cancel" : "Remove"}
+                    </button>
+                  </div>
+                  {confirmDel === e.name && (
+                    <div style={{ marginTop: 10, padding: "10px 14px", background: "#fff5f5", borderRadius: 8, border: "1px solid #fecaca", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 13, color: "#991b1b" }}>Remove {e.name} from the team?</span>
+                      <button onClick={() => removeEmployee(e.name)}
+                        style={{ background: "#E51636", color: "#fff", border: "none", borderRadius: 6, padding: "5px 14px", cursor: "pointer", fontWeight: "bold", fontSize: 13 }}>
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
